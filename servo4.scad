@@ -1,8 +1,8 @@
 $fs=.5;
-module hold(){
+module hold(hole){
 	translate([0,0,-2])difference(){
 		cube([32.4,22.4,2]);
-		translate([1,-1,-1])cube([30.4,11,5]);
+		if(hole)translate([-1,-1,-1])cube([6,11,5]);
 	}
 	translate([4.9,0,0])translate([.1,.1,0]){
 		translate([0,15.7,0]){
@@ -28,5 +28,6 @@ module hold(){
 		}
 	}
 }
+module x4(x){hold(x);scale([1,-1,1])hold(x);scale([-1,1,1])hold(x);scale([-1,-1,1])hold(x);}
 
-hold();scale([1,-1,1])hold();scale([-1,1,1])hold();scale([-1,-1,1])hold();
+x4(1);//translate([0,50,0])x4(1);
