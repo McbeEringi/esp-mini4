@@ -24,10 +24,7 @@ void flush(AsyncWebSocket *ws){// op tx [1,op,...clis]
 }
 void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void *arg,uint8_t *data,size_t len){
 	switch(type){
-		case WS_EVT_CONNECT:{// init tx [0,id]
-			uint8_t l=3,a[l]={0,(uint8_t)client->id()};
-			client->binary(a,l);if(op==NULL)op=client;flush(ws);
-		}break;
+		case WS_EVT_CONNECT:{uint8_t l=3,a[l]={0,(uint8_t)client->id()};client->binary(a,l);if(op==NULL)op=client;flush(ws);}break;// init tx [0,id]
 		case WS_EVT_DISCONNECT:
 			if(ws->count()>0){if(op==client)op=*(ws->getClients().nth(ws->count()-1));flush(ws);}else op=NULL;
 			v[0]=0;v[1]=0;
@@ -39,10 +36,7 @@ void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void
 					case 1:{// op rx [1,op]
 						if(op==client){
 							AsyncWebSocketClient *tmp;
-							for(uint8_t i=0;i<ws->count();i++){
-								tmp=*(ws->getClients().nth(i));
-								if(tmp->id()==data[1]){op=tmp;flush(ws);break;}
-							}
+							for(uint8_t i=0;i<ws->count();i++){tmp=*(ws->getClients().nth(i));if(tmp->id()==data[1]){op=tmp;flush(ws);break;}}
 						}
 					}break;
 					case 2:{// velocity rxtx [2,L,L,L,L,R,R,R,R] LittleEndian
@@ -52,9 +46,7 @@ void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void
 							ws->binaryAll(data,9);
 						}
 					}break;
-					case 3:{// txt rxtx [3,...txt]
-							ws->binaryAll(data,info->len);
-					}break;
+					case 3:{ws->binaryAll(data,info->len);}break;// txt rxtx [3,...txt]
 				}
 			}
 		}break;
@@ -62,6 +54,8 @@ void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void
 }
 
 void setup(){
+	servo_init(LFCH,LFPIN);servo_init(RBCH,RBPIN);
+	servo_init(LBCH,LBPIN);servo_init(RFCH,RFPIN);
 	Wire.begin(I2CD,I2CC);
 
 	display.begin(SSD1306_SWITCHCAPVCC,0x3c);display.setTextColor(SSD1306_WHITE);
@@ -81,8 +75,7 @@ void setup(){
 	display.clearDisplay();display.setCursor(0,0);
 	display.printf("\n%s\n\n%s",WiFi.SSID().c_str(),WiFi.localIP().toString().c_str());
 	display.display();
-	ws.onEvent(onWS);
-	svr.addHandler(&ws);
+	ws.onEvent(onWS);svr.addHandler(&ws);
 	svr.on("/",HTTP_GET,[](AsyncWebServerRequest *request){request->send_P(200,"text/html",html);});
 	svr.onNotFound([](AsyncWebServerRequest *request){request->send_P(302,"text/html",html);});
 	svr.begin();
@@ -92,8 +85,8 @@ void setup(){
 		.onError([](ota_error_t e){display.clearDisplay();display.setCursor(0,0);display.printf("%s update\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"flash":"spiffs",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");display.display();delay(5000);})
 		.begin();
 
-	servo_init(LFCH,LFPIN);servo(LFCH,.5);delay(250);servo_init(RBCH,RBPIN);servo(RBCH,.5);delay(250);
-	servo_init(LBCH,LBPIN);servo(LBCH,.5);delay(250);servo_init(RFCH,RFPIN);servo(RFCH,.5);delay(250);
+	servo(LFCH,.5);delay(250);servo(RBCH,.5);delay(250);
+	servo(LBCH,.5);delay(250);servo(RFCH,.5);delay(250);
 }
 
 void loop(){
