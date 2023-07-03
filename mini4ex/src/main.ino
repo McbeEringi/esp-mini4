@@ -3,7 +3,7 @@
 AsyncWebServer svr(80);
 AsyncWebSocket ws("/ws");
 AsyncWebSocketClient *op=NULL;
-float v[2]={},t;
+float v[2]={},t,pitch;
 Adafruit_SSD1306 display(128,64,&Wire,-1);
 
 float fract(float x){return x-floor(x);}
@@ -12,6 +12,7 @@ float saturate(float x){return clamp(x,0.,1.);}
 float mix(float x,float y,float a){return x*(1.-a)+y*a;}
 float step(float a,float x){return x<a?0.:1.;}
 float smoothstep(float a,float b,float x){x=saturate((x-a)/(b-a));return x*x*(3.-2.*x);}
+float max(float a,float b){return a<b?b:a;}
 
 void servo_init(uint8_t ch,uint8_t pin){ledcSetup(ch,400,LEDC_TIMER_14_BIT);ledcAttachPin(pin,ch);}
 void servo(uint8_t ch,float x){ledcWrite(ch,(x*1900+500)*6.5536);}
@@ -54,8 +55,10 @@ void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void
 }
 
 void setup(){
-	servo_init(LFCH,LFPIN);servo_init(RBCH,RBPIN);
-	servo_init(LBCH,LBPIN);servo_init(RFCH,RFPIN);
+	servo_init(LFXCH,LFXPIN);servo_init(LFYCH,LFYPIN);
+	servo_init(LBXCH,LBXPIN);servo_init(LBYCH,LBYPIN);
+	servo_init(RFXCH,RFXPIN);servo_init(RFYCH,RFYPIN);
+	servo_init(RBXCH,RBXPIN);servo_init(RBYCH,RBYPIN);
 	Wire.begin(I2CD,I2CC);
 
 	display.begin(SSD1306_SWITCHCAPVCC,0x3c);display.setTextColor(SSD1306_WHITE);
@@ -81,12 +84,13 @@ void setup(){
 	svr.begin();
 	ArduinoOTA
 		.setHostname(NAME).setPassword(PASS)
+		.onStart([](){ws.enable(false);ws.printfAll("update started: %s\n",ArduinoOTA.getCommand()==U_FLASH?"flash":"spiffs");ws.closeAll();})
 		.onProgress([](unsigned int x,unsigned int a){display.clearDisplay();display.drawBitmap(32,0,icon,64,64,SSD1306_WHITE);display.drawFastHLine(0,62,128,SSD1306_WHITE);display.fillRect(1,61,x*126/a,3,SSD1306_WHITE);display.display();})
 		.onError([](ota_error_t e){display.clearDisplay();display.setCursor(0,0);display.printf("%s update\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"flash":"spiffs",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");display.display();delay(5000);})
 		.begin();
 
-	servo(LFCH,.5);delay(250);servo(RBCH,.5);delay(250);
-	servo(LBCH,.5);delay(250);servo(RFCH,.5);delay(250);
+	servo(LFXCH,.5);servo(LFYCH,.5);delay(250);servo(RBXCH,.5);servo(RBYCH,.5);delay(250);
+	servo(LBXCH,.5);servo(LBYCH,.5);delay(250);servo(RFXCH,.5);servo(RFYCH,.5);delay(250);
 }
 
 void loop(){
@@ -94,8 +98,8 @@ void loop(){
 	display.clearDisplay();display.setCursor(0,0);
 	display.printf("\n%f\n\n%f",v[0],v[1]);
 	display.display();
-	t=millis()*.0015;
-	servo(LFCH,walk(t+.5,v[0]));servo(RFCH,walk(t   ,-v[1]));
-	servo(LBCH,walk(t   ,v[0]));servo(RBCH,walk(t+.5,-v[1]));
-	delay(5);
+	t+=(pitch=max(max(fabs(v[0]),fabs(v[1])),.3))*.06;
+	servo(LFXCH,walk(t+.5,v[0]/pitch));servo(RFXCH,walk(t   ,-v[1]/pitch));
+	servo(LBXCH,walk(t   ,v[0]/pitch));servo(RBXCH,walk(t+.5,-v[1]/pitch));
+	delay(10);
 }
