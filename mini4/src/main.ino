@@ -15,7 +15,7 @@ float smoothstep(float a,float b,float x){x=saturate((x-a)/(b-a));return x*x*(3.
 float max(float a,float b){return a<b?b:a;}
 
 void servo_init(uint8_t ch,uint8_t pin){ledcSetup(ch,400,LEDC_TIMER_14_BIT);ledcAttachPin(pin,ch);}
-void servo(uint8_t ch,float x){ledcWrite(ch,(x*1900+500)*6.5536);}
+void servo(uint8_t ch,float x){ledcWrite(ch,(x*1900+500)*6.5536);}// tick/us=(hz*(2^bit))/1000000
 float walk(float x,float s){x=fract(x)*2.;s*=.4;return smoothstep(0.,1.,mix(saturate((1.-x)*4.-1.5),x-1.,step(1.,x)))*s+(1.-s)*.5;}// [0~1]
 
 void flush(AsyncWebSocket *ws){// op tx [1,op,...clis]
@@ -82,7 +82,6 @@ void setup(){
 	svr.begin();
 	ArduinoOTA
 		.setHostname(NAME).setPassword(PASS)
-		.onStart([](){ws.enable(false);ws.printfAll("update started: %s\n",ArduinoOTA.getCommand()==U_FLASH?"flash":"spiffs");ws.closeAll();})
 		.onProgress([](unsigned int x,unsigned int a){display.clearDisplay();display.drawBitmap(32,0,icon,64,64,SSD1306_WHITE);display.drawFastHLine(0,62,128,SSD1306_WHITE);display.fillRect(1,61,x*126/a,3,SSD1306_WHITE);display.display();})
 		.onError([](ota_error_t e){display.clearDisplay();display.setCursor(0,0);display.printf("%s update\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"flash":"spiffs",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");display.display();delay(5000);})
 		.begin();
