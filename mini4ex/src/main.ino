@@ -14,9 +14,10 @@ float step(float a,float x){return x<a?0.:1.;}
 float smoothstep(float a,float b,float x){x=saturate((x-a)/(b-a));return x*x*(3.-2.*x);}
 float max(float a,float b){return a<b?b:a;}
 
-void servo_init(uint8_t ch,uint8_t pin){ledcSetup(ch,400,LEDC_TIMER_16_BIT);ledcAttachPin(pin,ch);}
-void servo(uint8_t ch,float x){ledcWrite(ch,(x*1900+500)*26.2144);}// tick/us=(hz*(2^bit))/1000000
-float walk(float x,float s){x=fract(x)*2.;s*=.4;return smoothstep(0.,1.,mix(saturate((1.-x)*4.-1.5),x-1.,step(1.,x)))*s+(1.-s)*.5;}// [0~1]
+void servo_init(uint8_t ch,uint8_t pin){ledcSetup(ch,320,LEDC_TIMER_16_BIT);ledcAttachPin(pin,ch);}
+void servo(uint8_t ch,float x){ledcWrite(ch,(x*2000+500)*20.97152);}// tick/us=(hz*(2^bit))/1000000
+float walkX(float x,float s){x=fract(x)*2.;s*=.4;return mix(.5,smoothstep(0.,1.,mix(saturate((1.-x)*4.-1.5),x-1.,step(1.,x))),s);}// [0~1]
+float walkY(float x,float s){return .4;x=fract(x)*2.;s*=.4;return smoothstep(0.,1.,mix(saturate((1.-x)*4.-1.5),x-1.,step(1.,x)))*s+(1.-s)*.5;}// [0~1]
 
 void flush(AsyncWebSocket *ws){// op tx [1,op,...clis]
 	uint8_t l=ws->count()+2,a[l]={1,(uint8_t)op->id()};
@@ -88,17 +89,17 @@ void setup(){
 		.onError([](ota_error_t e){display.clearDisplay();display.setCursor(0,0);display.printf("%s update\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"flash":"spiffs",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");display.display();delay(5000);})
 		.begin();
 
-	servo(LFXCH,.5);servo(LFYCH,.5);delay(250);servo(RBXCH,.5);servo(RBYCH,.5);delay(250);
-	servo(LBXCH,.5);servo(LBYCH,.5);delay(250);servo(RFXCH,.5);servo(RFYCH,.5);delay(250);
+	servo(LFXCH,.3);servo(LFYCH,.3);delay(250);servo(RBXCH,.3);servo(RBYCH,.3);delay(250);
+	servo(LBXCH,.3);servo(LBYCH,.3);delay(250);servo(RFXCH,.3);servo(RFYCH,.3);delay(250);
 }
 
 void loop(){
 	ArduinoOTA.handle();
 	display.clearDisplay();display.setCursor(0,0);
-	display.printf("\n%f\n\n%f",v[0],v[1]);
+	display.printf("\n%f\n\n%f\n\n%u",v[0],v[1],ws.count());
 	display.display();
 	t+=(pitch=max(max(fabs(v[0]),fabs(v[1])),.3))*.06;
-	servo(LFXCH,walk(t+.5,v[0]/pitch));servo(RFXCH,walk(t   ,-v[1]/pitch));
-	servo(LBXCH,walk(t   ,v[0]/pitch));servo(RBXCH,walk(t+.5,-v[1]/pitch));
+	servo(LFXCH,walkX(t+.5,v[0]/pitch));servo(LFYCH,1.-walkY(t+.5,v[0]/pitch));servo(RFXCH,walkX(t   ,-v[1]/pitch));servo(RFYCH,walkY(t   ,v[1]/pitch));
+	servo(LBXCH,walkX(t   ,v[0]/pitch));servo(LBYCH,walkY(t   ,v[0]/pitch));servo(RBXCH,walkX(t+.5,-v[1]/pitch));servo(RBYCH,1.-walkY(t+.5,v[1]/pitch));
 	delay(10);
 }

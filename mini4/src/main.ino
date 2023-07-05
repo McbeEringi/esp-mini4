@@ -14,8 +14,8 @@ float step(float a,float x){return x<a?0.:1.;}
 float smoothstep(float a,float b,float x){x=saturate((x-a)/(b-a));return x*x*(3.-2.*x);}
 float max(float a,float b){return a<b?b:a;}
 
-void servo_init(uint8_t ch,uint8_t pin){ledcSetup(ch,400,LEDC_TIMER_14_BIT);ledcAttachPin(pin,ch);}
-void servo(uint8_t ch,float x){ledcWrite(ch,(x*1900+500)*6.5536);}// tick/us=(hz*(2^bit))/1000000
+void servo_init(uint8_t ch,uint8_t pin){ledcSetup(ch,320,LEDC_TIMER_14_BIT);ledcAttachPin(pin,ch);}
+void servo(uint8_t ch,float x){ledcWrite(ch,(x*2000+500)*5.24288);}// tick/us=(hz*(2^bit))/1000000
 float walk(float x,float s){x=fract(x)*2.;s*=.4;return smoothstep(0.,1.,mix(saturate((1.-x)*4.-1.5),x-1.,step(1.,x)))*s+(1.-s)*.5;}// [0~1]
 
 void flush(AsyncWebSocket *ws){// op tx [1,op,...clis]
@@ -93,7 +93,7 @@ void setup(){
 void loop(){
 	ArduinoOTA.handle();
 	display.clearDisplay();display.setCursor(0,0);
-	display.printf("\n%f\n\n%f",v[0],v[1]);
+	display.printf("\n%f\n\n%f\n\n%u",v[0],v[1],ws.count());
 	display.display();
 	t+=(pitch=max(max(fabs(v[0]),fabs(v[1])),.3))*.06;
 	servo(LFCH,walk(t+.5,v[0]/pitch));servo(RFCH,walk(t   ,-v[1]/pitch));
