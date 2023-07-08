@@ -63,8 +63,14 @@ void setup(){
 	display.clearDisplay();
 	display.drawBitmap(32,0,icon,64,64,SSD1306_WHITE);
 	display.display();
-
 	delay(1000);
+
+	display.clearDisplay();display.setCursor(0,32);
+	display.drawBitmap(0,0,giteki,32,32,SSD1306_WHITE);
+	display.printf(GITEKI);
+	display.display();
+	delay(1000);
+
 	WiFi.begin();
 	for(uint8_t i=0;WiFi.status()!=WL_CONNECTED;i++){
 		if(i>20){
