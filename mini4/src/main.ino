@@ -103,7 +103,7 @@ void loop(){
 	display.clearDisplay();display.setCursor(0,0);
 	display.printf("\n%f\n\n%f\n\n%u",v[0],v[1],ws.count());
 	display.display();
-	t+=(pitch=max(max(fabs(v[0]),fabs(v[1])),.3))*.08;
+	t+=(pitch=max(max(fabs(v[0]),fabs(v[1])),.3))*.1;
 	servo(LFCH,walk(t+.5,v[0]/pitch));servo(RFCH,walk(t   ,-v[1]/pitch));
 	servo(LBCH,walk(t   ,v[0]/pitch));servo(RBCH,walk(t+.5,-v[1]/pitch));
 	delay(10);
