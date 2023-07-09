@@ -11,12 +11,13 @@ float clamp(float x,float a,float b){return min(max(x,a),b);}
 float saturate(float x){return clamp(x,0.,1.);}
 float mix(float x,float y,float a){return x*(1.-a)+y*a;}
 float step(float a,float x){return x<a?0.:1.;}
-float smoothstep(float a,float b,float x){x=saturate((x-a)/(b-a));return x*x*(3.-2.*x);}
+float linearstep(float a,float b,float x){return saturate((x-a)/(b-a));}
+float smoothstep(float a,float b,float x){x=linearstep(a,b,x);return x*x*(3.-2.*x);}
 float max(float a,float b){return a<b?b:a;}
 
 void servo_init(uint8_t ch,uint8_t pin){ledcSetup(ch,320,LEDC_TIMER_14_BIT);ledcAttachPin(pin,ch);}
 void servo(uint8_t ch,float x){ledcWrite(ch,(x*2000+500)*5.24288);}// tick/us=(hz*(2^bit))/1000000
-float walk(float x,float s){x=fract(x)*2.;s*=.4;return smoothstep(0.,1.,mix(saturate((1.-x)*4.-1.5),x-1.,step(1.,x)))*s+(1.-s)*.5;}// [0~1]
+float walk(float x,float s){x=fract(x)*2.;s*=.2;return saturate(mix(mix(-2.,3.,linearstep(.9,0.,x+.05)),linearstep(.9,2.,x),step(.9,x)))*s+(1.-s)*.5;}// [0~1]
 
 void flush(AsyncWebSocket *ws){// op tx [1,op,...clis]
 	uint8_t l=ws->count()+2,a[l]={1,(uint8_t)op->id()};
@@ -80,7 +81,7 @@ void setup(){
 		delay(500);
 	}
 	display.clearDisplay();display.setCursor(0,0);
-	display.printf("\n%s\n\n%s",WiFi.SSID().c_str(),WiFi.localIP().toString().c_str());
+	display.printf("\n%s\n\n%s.local\n\n ( %s )",WiFi.SSID().c_str(),NAME,WiFi.localIP().toString().c_str());
 	display.display();
 	ws.onEvent(onWS);svr.addHandler(&ws);
 	svr.on("/",HTTP_GET,[](AsyncWebServerRequest *request){request->send_P(200,"text/html",html);});
@@ -94,6 +95,7 @@ void setup(){
 
 	servo(LFCH,.5);delay(250);servo(RBCH,.5);delay(250);
 	servo(LBCH,.5);delay(250);servo(RFCH,.5);delay(250);
+	while(!ws.count())delay(500);
 }
 
 void loop(){
@@ -101,7 +103,7 @@ void loop(){
 	display.clearDisplay();display.setCursor(0,0);
 	display.printf("\n%f\n\n%f\n\n%u",v[0],v[1],ws.count());
 	display.display();
-	t+=(pitch=max(max(fabs(v[0]),fabs(v[1])),.3))*.06;
+	t+=(pitch=max(max(fabs(v[0]),fabs(v[1])),.3))*.08;
 	servo(LFCH,walk(t+.5,v[0]/pitch));servo(RFCH,walk(t   ,-v[1]/pitch));
 	servo(LBCH,walk(t   ,v[0]/pitch));servo(RBCH,walk(t+.5,-v[1]/pitch));
 	delay(10);

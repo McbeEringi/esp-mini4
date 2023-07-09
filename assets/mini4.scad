@@ -18,11 +18,11 @@ module band(v=1,t=1){
 }
 module leg()difference(){
 	hull(){
-		cylinder(d=6,h=2.5);
-		translate([20,0,0])cylinder(d=1,h=2.5);
+		cylinder(d=8,h=2.5);
+		translate([40,0,0])cylinder(d=1,h=2.5);
 	}
-	cylinder(d=4.5,h=6,center=true);
-	translate([0,-.25,-.1])cube([5,.5,3]);
+	cylinder(d=4.86,h=6,center=true);
+	translate([0,-.5,-.1])cube([10,1,3]);
 }
 module exleg(){
 	difference(){
@@ -42,5 +42,5 @@ module exleg(){
 v=1;
 //for(i=[0:1])translate([30*i,5,0])band(v);
 //for(i=[0:1])translate([10*i,-5,0])scale([1,-1,1])joiner(v);
-leg();
+for(i=[0:0])rotate(90)translate([-17,20*i+10,0])leg();
 //for(i=[0:3])rotate(90)translate([-30,10*i+10,0])exleg();
