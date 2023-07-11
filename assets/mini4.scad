@@ -19,9 +19,9 @@ module band(v=1,t=1){
 module leg()difference(){
 	hull(){
 		cylinder(d=8,h=2.5);
-		translate([40,0,0])cylinder(d=1,h=2.5);
+		translate([40,0,2.5/2])scale([1,1,2.5])#sphere(d=1);
 	}
-	cylinder(d=4.86,h=6,center=true);
+	cylinder(d=4.76,h=6,center=true);
 	translate([0,-.5,-.1])cube([10,1,3]);
 }
 module exleg(){

@@ -7,17 +7,17 @@ float v[2]={},t,pitch;
 Adafruit_SSD1306 display(128,64,&Wire,-1);
 
 float fract(float x){return x-floor(x);}
-float clamp(float x,float a,float b){return min(max(x,a),b);}
+float clamp(float x,float a,float b){return fmin(fmax(x,a),b);}
 float saturate(float x){return clamp(x,0.,1.);}
 float mix(float x,float y,float a){return x*(1.-a)+y*a;}
 float step(float a,float x){return x<a?0.:1.;}
-float smoothstep(float a,float b,float x){x=saturate((x-a)/(b-a));return x*x*(3.-2.*x);}
-float max(float a,float b){return a<b?b:a;}
+float linearstep(float a,float b,float x){return saturate((x-a)/(b-a));}
+float smoothstep(float a,float b,float x){x=linearstep(a,b,x);return x*x*(3.-2.*x);}
 
 void servo_init(uint8_t ch,uint8_t pin){ledcSetup(ch,320,LEDC_TIMER_16_BIT);ledcAttachPin(pin,ch);}
 void servo(uint8_t ch,float x){ledcWrite(ch,(x*2000+500)*20.97152);}// tick/us=(hz*(2^bit))/1000000
-float walkX(float x,float s){x=fract(x)*2.;s*=.4;return mix(.5,smoothstep(0.,1.,mix(saturate((1.-x)*4.-1.5),x-1.,step(1.,x))),s);}// [0~1]
-float walkY(float x,float s){return .4;x=fract(x)*2.;s*=.4;return smoothstep(0.,1.,mix(saturate((1.-x)*4.-1.5),x-1.,step(1.,x)))*s+(1.-s)*.5;}// [0~1]
+float walkX(float x,float s){x=fract(x)*2.;s*=.4;return mix(.5,saturate(mix(mix(-2.,3.,linearstep(.9,0.,x+.05)),linearstep(.9,2.,x),step(.9,x))),s);}// [0~1]
+float walkY(float x,float s){return .4;}// [0~1]
 
 void flush(AsyncWebSocket *ws){// op tx [1,op,...clis]
 	uint8_t l=ws->count()+2,a[l]={1,(uint8_t)op->id()};
@@ -104,7 +104,7 @@ void loop(){
 	display.clearDisplay();display.setCursor(0,0);
 	display.printf("\n%f\n\n%f\n\n%u",v[0],v[1],ws.count());
 	display.display();
-	t+=(pitch=max(max(fabs(v[0]),fabs(v[1])),.3))*.06;
+	t+=(pitch=fmax(fmax(fabs(v[0]),fabs(v[1])),.3))*.06;
 	servo(LFXCH,walkX(t+.5,v[0]/pitch));servo(LFYCH,1.-walkY(t+.5,v[0]/pitch));servo(RFXCH,walkX(t   ,-v[1]/pitch));servo(RFYCH,walkY(t   ,v[1]/pitch));
 	servo(LBXCH,walkX(t   ,v[0]/pitch));servo(LBYCH,walkY(t   ,v[0]/pitch));servo(RBXCH,walkX(t+.5,-v[1]/pitch));servo(RBYCH,1.-walkY(t+.5,v[1]/pitch));
 	delay(10);
