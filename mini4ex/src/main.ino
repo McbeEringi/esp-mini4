@@ -17,7 +17,8 @@ float smoothstep(float a,float b,float x){x=linearstep(a,b,x);return x*x*(3.-2.*
 void servo_init(uint8_t ch,uint8_t pin){ledcSetup(ch,320,LEDC_TIMER_16_BIT);ledcAttachPin(pin,ch);}
 void servo(uint8_t ch,float x){ledcWrite(ch,(x*2000+500)*20.97152);}// tick/us=(hz*(2^bit))/1000000
 float walkX(float x,float s){x=fract(x)*2.;s*=.4;return mix(.5,saturate(mix(mix(-2.,3.,linearstep(.9,0.,x+.05)),linearstep(.9,2.,x),step(.9,x))),s);}// [0~1]
-float walkY(float x,float s){return .4;}// [0~1]
+float walkY(float x,float s){x=fract(x);return .1+mix(.15,0.,step(.45,x))*step(.1,fabs(s));}// [0~1]
+float walkY_(float x,float s){x=fract(x);return linearstep(.45,1.,x)*step(.45,x)*step(.1,fabs(s))*.05;}// [0~1]
 
 void flush(AsyncWebSocket *ws){// op tx [1,op,...clis]
 	uint8_t l=ws->count()+2,a[l]={1,(uint8_t)op->id()};
@@ -82,9 +83,6 @@ void setup(){
 		}
 		delay(500);
 	}
-	display.clearDisplay();display.setCursor(0,0);
-	display.printf("\n%s\n\n%s",WiFi.SSID().c_str(),WiFi.localIP().toString().c_str());
-	display.display();
 	ws.onEvent(onWS);svr.addHandler(&ws);
 	svr.on("/",HTTP_GET,[](AsyncWebServerRequest *request){request->send_P(200,"text/html",html);});
 	svr.onNotFound([](AsyncWebServerRequest *request){request->send_P(302,"text/html",html);});
@@ -94,18 +92,16 @@ void setup(){
 		.onProgress([](unsigned int x,unsigned int a){display.clearDisplay();display.drawBitmap(32,0,icon,64,64,SSD1306_WHITE);display.drawFastHLine(0,62,128,SSD1306_WHITE);display.fillRect(1,61,x*126/a,3,SSD1306_WHITE);display.display();})
 		.onError([](ota_error_t e){display.clearDisplay();display.setCursor(0,0);display.printf("%s update\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"flash":"spiffs",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");display.display();delay(5000);})
 		.begin();
-
-	servo(LFXCH,.3);servo(LFYCH,.3);delay(250);servo(RBXCH,.3);servo(RBYCH,.3);delay(250);
-	servo(LBXCH,.3);servo(LBYCH,.3);delay(250);servo(RFXCH,.3);servo(RFYCH,.3);delay(250);
 }
 
 void loop(){
 	ArduinoOTA.handle();
 	display.clearDisplay();display.setCursor(0,0);
-	display.printf("\n%f\n\n%f\n\n%u",v[0],v[1],ws.count());
+	if(ws.count())display.printf("\n%f\n\n%f\n\n%u",v[0],v[1],ws.count());
+	else display.printf("\n%s\n\n%s",WiFi.SSID().c_str(),WiFi.localIP().toString().c_str());
 	display.display();
-	t+=(pitch=fmax(fmax(fabs(v[0]),fabs(v[1])),.3))*.06;
-	servo(LFXCH,walkX(t+.5,v[0]/pitch));servo(LFYCH,1.-walkY(t+.5,v[0]/pitch));servo(RFXCH,walkX(t   ,-v[1]/pitch));servo(RFYCH,walkY(t   ,v[1]/pitch));
-	servo(LBXCH,walkX(t   ,v[0]/pitch));servo(LBYCH,walkY(t   ,v[0]/pitch));servo(RBXCH,walkX(t+.5,-v[1]/pitch));servo(RBYCH,1.-walkY(t+.5,v[1]/pitch));
+	t+=(pitch=fmax(fmax(fabs(v[0]),fabs(v[1])),.3))*.1;
+	servo(LFXCH,walkX(t+.5,v[0]/pitch)-.1);servo(LFYCH,1.-walkY(t+.5,v[0]/pitch)-walkY_(t+.5,v[0]/pitch));servo(RFXCH,walkX(t   ,-v[1]/pitch)+.1);servo(RFYCH,walkY(t   ,v[1]/pitch)+walkY_(t,v[1]/pitch));
+	servo(LBXCH,walkX(t   ,v[0]/pitch)+.1);servo(LBYCH,walkY(t   ,v[0]/pitch)-walkY_(t,v[0]/pitch));servo(RBXCH,walkX(t+.5,-v[1]/pitch)-.1);servo(RBYCH,1.-walkY(t+.5,v[1]/pitch)+walkY_(t+.5,v[1]/pitch)-.07);
 	delay(10);
 }

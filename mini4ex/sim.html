@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>mini4ex sim</title>
+</head>
+<body>
+<style>:root{background-color:#000;}</style>
+<canvas id="c"></canvas>
+<script>
+const
+	ctx=c.getContext('2d'),
+	saturate=x=>Math.min(Math.max(x,0),1),
+	t={valueOf:_=>performance.now()/1000},
+	p=(t0,t1,p0=[0,0],p1=[10.3,12.1],r=16,l=60,n)=>(
+		t0=(saturate(t0)+1)*Math.PI,t1=saturate(t1)*Math.PI,
+		p0=p0.map((x,i)=>x+r*Math[i?'sin':'cos'](t0)),
+		p1=p1.map((x,i)=>x+r*Math[i?'sin':'cos'](t1)),
+		n=p0.map((x,i)=>p1[i]-x),
+		p0.map((x,i)=>x+n[i]/Math.hypot(...n)*l)
+	),
+	draw=(_,
+		t01=[Math.random(),Math.random()]
+	)=>(
+		ctx.fillStyle='#000',ctx.lineWidth=1,
+		//ctx.fillRect(0,0,c.width,c.height),
+		ctx.strokeStyle=`#${t01.map(x=>(x*15|0).toString(16)).join('')}f8`,ctx.stroke(new Path2D(`M${p(t01[0]*.5+.5,t01[1]*.75).map((x,i)=>x+[50,0][i])}v.01`)),
+		ctx.strokeStyle='#0ff',ctx.stroke(new Path2D(`M50,0v.01`)),
+		ctx.strokeStyle='#f0f',ctx.stroke(new Path2D(`M60.3,12.1v.01`)),
+		requestAnimationFrame(draw)
+	);
+c.width=1024,c.height=512,ctx.translate(0,c.height),ctx.scale(8,-8),ctx.lineCap='round',
+[...Array(8)].forEach(_=>draw());
+</script>
+</body>
+</html>
