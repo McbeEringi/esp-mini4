@@ -57,7 +57,7 @@ void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void
 void setup(){
 	servo_init(LFCH,LFPIN);servo_init(RBCH,RBPIN);
 	servo_init(LBCH,LBPIN);servo_init(RFCH,RFPIN);
-	Wire.begin(I2CD,I2CC);
+	Wire.begin(I2CD,I2CC);SPIFFS.begin();
 
 	display.begin(SSD1306_SWITCHCAPVCC,0x3c);display.setTextColor(SSD1306_WHITE);
 	display.clearDisplay();
@@ -79,15 +79,16 @@ void setup(){
 		}
 		delay(500);
 	}
-	ws.onEvent(onWS);svr.addHandler(&ws);
-	svr.on("/",HTTP_GET,[](AsyncWebServerRequest *request){request->send_P(200,"text/html",html);});
-	svr.onNotFound([](AsyncWebServerRequest *request){request->send_P(302,"text/html",html);});
-	svr.begin();
 	ArduinoOTA
 		.setHostname(NAME).setPassword(PASS)
 		.onProgress([](unsigned int x,unsigned int a){display.clearDisplay();display.drawBitmap(32,0,icon,64,64,SSD1306_WHITE);display.drawFastHLine(0,62,128,SSD1306_WHITE);display.fillRect(1,61,x*126/a,3,SSD1306_WHITE);display.display();})
 		.onError([](ota_error_t e){display.clearDisplay();display.setCursor(0,0);display.printf("%s update\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"flash":"spiffs",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");display.display();delay(5000);})
 		.begin();
+	ws.onEvent(onWS);svr.addHandler(&ws);
+	svr.onNotFound([](AsyncWebServerRequest *request){request->redirect("/");});
+	svr.serveStatic("/",SPIFFS,"/").setDefaultFile("index.html");
+	svr.addHandler(new SPIFFSEditor(SPIFFS,NAME,PASS));
+	svr.begin();
 }
 
 void loop(){
