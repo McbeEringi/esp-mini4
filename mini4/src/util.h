@@ -1,7 +1,7 @@
 #include <driver/ledc.h>
 #include <WiFi.h>
 #include <Wire.h>
-#include <SPIFFS.h>
+#include <LittleFS.h>
 #include <ArduinoOTA.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
