@@ -37,10 +37,11 @@
 							(
 								e=new Uint8Array(e.data),
 								([
-									_=>(w.id=e[1]),
+									_=>(w.id=e[1],w.cfg=new Float32Array(e.buffer.slice(2))),
 									_=>flush(w.op=e[1],w.clis=[...e].slice(2)),
 									_=>w.vel=new Float32Array(e.buffer.slice(1)),
 									_=>w.chat=[...(w.chat||[]),td.decode(e.slice(1))].slice(-8),
+									_=>w.cfg=new Float32Array(e.buffer.slice(1)),
 								][e[0]]||(_=>w.msg=e))()
 							),
 							log.textContent=strfy(w)

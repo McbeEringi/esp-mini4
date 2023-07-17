@@ -29,25 +29,28 @@ void flush(AsyncWebSocket *ws){// op tx [1,op,...clis]
 }
 void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void *arg,uint8_t *data,size_t len){
 	switch(type){
-		case WS_EVT_CONNECT:{// init tx [0,id]
-			uint8_t l=3,a[l]={0,(uint8_t)client->id()};client->binary(a,l);if(op==NULL)op=client;flush(ws);
+		case WS_EVT_CONNECT:{// init tx [0,id,LF...,RF...,LB...,Rb...] LittleEndian float
+			uint8_t l=18,a[l]={0,(uint8_t)client->id()};for(uint8_t i=0;i<16;i++)a[i+2]=*(((uint8_t*)&cfg)+i);client->binary(a,l);if(op==NULL)op=client;flush(ws);
 		}break;
 		case WS_EVT_DISCONNECT:{
-			AsyncWebSocketClient *cand=*(ws->getClients().begin());if(cand){if(op==client)op=cand;flush(ws);}else op=NULL;
+			if(ws->count()){if(op==client)op=*(ws->getClients().begin());flush(ws);}else op=NULL;
 			v[0]=0;v[1]=0;
 		}break;
 		case WS_EVT_DATA:{
 			AwsFrameInfo *info=(AwsFrameInfo*)arg;
 			if(info->final&&info->index==0&&info->len==len){
 				switch(data[0]){
-					case 0:cfgsave();break;// save rx [0]
+					case 0:cfgsave();break;// cfgsave rx [0]
 					case 1:{// op rx [1,op]
 						if(op==client)for(auto cli=ws->getClients().begin();*cli;++cli)if((*cli)->id()==data[1]){op=*cli;flush(ws);break;}
 					}break;
-					case 2:{// velocity rxtx [2,L,L,L,L,R,R,R,R] LittleEndian
+					case 2:{// velocity rxtx [2,L,L,L,L,R,R,R,R] LittleEndian float
 						if(op==client){v[0]=*(float*)(data+1);v[1]=*(float*)(data+5);ws->binaryAll(data,9);}
 					}break;
 					case 3:{ws->binaryAll(data,info->len);}break;// txt rxtx [3,...txt]
+					case 4:{// offset rxtx [4,LF...,RF...,LB...,Rb...] LittleEndian float
+						if(op==client){for(uint8_t i=0;i<4;i++)cfg[i]=*(float*)(data+1+(i<<2));ws->binaryAll(data,17);}
+					}break;
 				}
 			}
 		}break;
