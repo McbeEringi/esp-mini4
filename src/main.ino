@@ -3,9 +3,8 @@
 AsyncWebServer svr(80);
 AsyncWebSocket ws("/ws");
 AsyncWebSocketClient *op=NULL;
-float v[2]={},t,pitch;
+float v[2]={},cfg[4]={},t,pitch;
 Adafruit_SSD1306 display(128,64,&Wire,-1);
-StaticJsonDocument<256> cfg;
 
 float fract(float x){return x-floor(x);}
 float clamp(float x,float a,float b){return fmin(fmax(x,a),b);}
@@ -19,37 +18,34 @@ void servo_init(uint8_t ch,uint8_t pin){ledcSetup(ch,320,LEDC_TIMER_14_BIT);ledc
 void servo(uint8_t ch,float x){ledcWrite(ch,(x*2000+500)*5.24288);}// tick/us=(hz*(2^bit))/1000000
 float walk(float x,float s){x=fract(x)*2.;s*=.2;return mix(.5,saturate(mix(mix(-2.,3.,linearstep(.9,0.,x+.05)),linearstep(.9,2.,x),step(.9,x))),s);}// [0~1]
 
-void cfgsave(){File x=FSYS.open(CFG_PATH,FILE_WRITE);if(cfg.isNull())x.print(CFG_JSON);else serializeJson(cfg,x);x.close();}
-const char* cfgload(){if(!FSYS.exists(CFG_PATH))cfgsave();File x=FSYS.open(CFG_PATH);DeserializationError e=deserializeJson(cfg,x);if(e)deserializeJson(cfg,CFG_JSON);x.close();return e.c_str();}
+// [ offsetLF, offsetRF, offsetLB, offsetRB ]
+void cfgsave(){File x=FSYS.open(CFG_PATH,FILE_WRITE);x.write((const uint8_t*)&cfg,sizeof(cfg));x.close();}
+void cfgload(){if(FSYS.exists(CFG_PATH)){File x=FSYS.open(CFG_PATH);x.read((uint8_t*)&cfg,min(sizeof(cfg),x.size()));x.close();}}
 
 void flush(AsyncWebSocket *ws){// op tx [1,op,...clis]
-	uint8_t l=ws->count()+2,a[l]={1,(uint8_t)op->id()};
-	for(uint8_t i=2;i<l;i++)a[i]=(*(ws->getClients().nth(i-2)))->id();
+	uint8_t i=2,l=ws->count()+i,a[l]={1,(uint8_t)op->id()};
+	for(auto cli=ws->getClients().begin();i<l;++cli)a[i++]=(*cli)->id();
 	ws->binaryAll(a,l);
 }
 void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void *arg,uint8_t *data,size_t len){
 	switch(type){
-		case WS_EVT_CONNECT:{uint8_t l=3,a[l]={0,(uint8_t)client->id()};client->binary(a,l);if(op==NULL)op=client;flush(ws);}break;// init tx [0,id]
-		case WS_EVT_DISCONNECT:
-			if(ws->count()>0){if(op==client)op=*(ws->getClients().nth(ws->count()-1));flush(ws);}else op=NULL;
+		case WS_EVT_CONNECT:{// init tx [0,id]
+			uint8_t l=3,a[l]={0,(uint8_t)client->id()};client->binary(a,l);if(op==NULL)op=client;flush(ws);
+		}break;
+		case WS_EVT_DISCONNECT:{
+			AsyncWebSocketClient *cand=*(ws->getClients().begin());if(cand){if(op==client)op=cand;flush(ws);}else op=NULL;
 			v[0]=0;v[1]=0;
-			break;
+		}break;
 		case WS_EVT_DATA:{
 			AwsFrameInfo *info=(AwsFrameInfo*)arg;
 			if(info->final&&info->index==0&&info->len==len){
 				switch(data[0]){
+					case 0:cfgsave();break;// save rx [0]
 					case 1:{// op rx [1,op]
-						if(op==client){
-							AsyncWebSocketClient *tmp;
-							for(uint8_t i=0;i<ws->count();i++){tmp=*(ws->getClients().nth(i));if(tmp->id()==data[1]){op=tmp;flush(ws);break;}}
-						}
+						if(op==client)for(auto cli=ws->getClients().begin();*cli;++cli)if((*cli)->id()==data[1]){op=*cli;flush(ws);break;}
 					}break;
 					case 2:{// velocity rxtx [2,L,L,L,L,R,R,R,R] LittleEndian
-						if(op==client){
-							v[0]=*(float*)(data+1);
-							v[1]=*(float*)(data+5);
-							ws->binaryAll(data,9);
-						}
+						if(op==client){v[0]=*(float*)(data+1);v[1]=*(float*)(data+5);ws->binaryAll(data,9);}
 					}break;
 					case 3:{ws->binaryAll(data,info->len);}break;// txt rxtx [3,...txt]
 				}
@@ -59,9 +55,8 @@ void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void
 }
 
 void setup(){
-	servo_init(LFCH,LFPIN);servo_init(RBCH,RBPIN);
-	servo_init(LBCH,LBPIN);servo_init(RFCH,RFPIN);
-	Wire.begin(I2CD,I2CC);FSYS.begin();
+	servo_init(LFCH,LFPIN);servo_init(RBCH,RBPIN);servo_init(LBCH,LBPIN);servo_init(RFCH,RFPIN);
+	Wire.begin(I2CD,I2CC);FSYS.begin();cfgload();
 
 	display.begin(SSD1306_SWITCHCAPVCC,0x3c);display.setTextColor(SSD1306_WHITE);
 	display.clearDisplay();
@@ -72,22 +67,23 @@ void setup(){
 	display.clearDisplay();display.setCursor(32,8);
 	display.drawBitmap(0,0,giteki,24,24,SSD1306_WHITE);
 	display.printf(GITEKI);
-	display.printf("\n%s: %s\n",CFG_PATH,cfgload());
+	display.printf("\nConnecting to WiFi...\n");
 	display.display();
 	delay(1000);
 
 	WiFi.begin();
 	for(uint8_t i=0;WiFi.status()!=WL_CONNECTED;i++){
 		if(i>20){
-			display.clearDisplay();display.setCursor(0,0);display.printf("smart config\n");display.display();
-			WiFi.beginSmartConfig();while(!WiFi.smartConfigDone());display.printf("done\n");display.display();
+			display.clearDisplay();display.setCursor(0,0);display.printf("\nWiFi not found.\n\nSmartConfig started.\n");display.display();
+			WiFi.beginSmartConfig();while(!WiFi.smartConfigDone());display.printf("\nSmartConfig success!\n");display.display();
 		}
 		delay(500);
 	}
 	ArduinoOTA
 		.setHostname(NAME).setPassword(PASS)
+		.onStart([](){FSYS.end();ws.enable(false);ws.textAll("OTA update started.");ws.closeAll();})
 		.onProgress([](unsigned int x,unsigned int a){display.clearDisplay();display.drawBitmap(32,0,icon,64,64,SSD1306_WHITE);display.drawFastHLine(0,62,128,SSD1306_WHITE);display.fillRect(1,61,x*126/a,3,SSD1306_WHITE);display.display();})
-		.onError([](ota_error_t e){display.clearDisplay();display.setCursor(0,0);display.printf("%s update\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"flash":"FSYS",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");display.display();delay(5000);})
+		.onError([](ota_error_t e){display.clearDisplay();display.setCursor(0,0);display.printf("OTA %s\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"Flash":"FSYS",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");display.display();delay(5000);})
 		.begin();
 	ws.onEvent(onWS);svr.addHandler(&ws);
 	svr.onNotFound([](AsyncWebServerRequest *request){request->redirect("/");});
@@ -102,7 +98,7 @@ void loop(){
 	else display.printf("\n%s\n\n%s.local\n\n ( %s )",WiFi.SSID().c_str(),NAME,WiFi.localIP().toString().c_str());
 	display.display();
 	t+=(pitch=fmax(fmax(fabs(v[0]),fabs(v[1])),.3))*.1;
-	servo(LFCH,walk(t+.5,v[0]/pitch)+(float)cfg["offset"]["LF"]);servo(RFCH,walk(t   ,-v[1]/pitch)+(float)cfg["offset"]["RF"]);
-	servo(LBCH,walk(t   ,v[0]/pitch)+(float)cfg["offset"]["LB"]);servo(RBCH,walk(t+.5,-v[1]/pitch)+(float)cfg["offset"]["RB"]);
+	servo(LFCH,walk(t+.5,v[0]/pitch)+cfg[0]);servo(RFCH,walk(t   ,-v[1]/pitch)+cfg[1]);
+	servo(LBCH,walk(t   ,v[0]/pitch)+cfg[2]);servo(RBCH,walk(t+.5,-v[1]/pitch)+cfg[3]);
 	delay(10);
 }

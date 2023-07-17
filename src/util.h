@@ -3,7 +3,6 @@
 #define FSYS LittleFS
 #include <ArduinoOTA.h>
 #include <ESPAsyncWebSrv.h>
-#include <ArduinoJson.h>
 #include <Adafruit_SSD1306.h>
 #define SSD1306_NO_SPLASH
 
@@ -12,8 +11,7 @@
 
 #define GITEKI "R 201-220555\n\n\nESP32-C3-WROOM-02\n"
 
-#define CFG_PATH "/config.json"
-#define CFG_JSON "{\"offset\":{\"LF\":0,\"RF\":0,\"LB\":0,\"RB\":0}}"
+#define CFG_PATH "/config.bin"
 
 #define I2CD 9
 #define I2CC 8
