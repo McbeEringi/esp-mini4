@@ -84,7 +84,7 @@ void setup(){
 	}
 	ArduinoOTA
 		.setHostname(NAME).setPassword(PASS)
-		.onStart([](){FSYS.end();ws.enable(false);ws.textAll("OTA update started.");ws.closeAll();})
+		// .onStart([](){FSYS.end();ws.enable(false);ws.textAll("OTA update started.");ws.closeAll();})
 		.onProgress([](unsigned int x,unsigned int a){display.clearDisplay();display.drawBitmap(32,0,icon,64,64,SSD1306_WHITE);display.drawFastHLine(0,62,128,SSD1306_WHITE);display.fillRect(1,61,x*126/a,3,SSD1306_WHITE);display.display();})
 		.onError([](ota_error_t e){display.clearDisplay();display.setCursor(0,0);display.printf("OTA %s\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"Flash":"FSYS",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");display.display();delay(5000);})
 		.begin();
