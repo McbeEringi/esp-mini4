@@ -15,12 +15,14 @@
 		</style>
 		<div id="stick"><div></div></div>
 		
-		<select class="sty" onchange="this.value&&send(this.value.split(','),console.log(1))"><option value="" disabled selected>select command to run...</option><optgroup id="cmd"></optgroup></select>
-		<input class="sty" placeholder="chat..." onchange="send([3,...te.encode(`<${w.id}> ${this.value}`)],this.value='')">
+		<select class="sty" onchange="Function(this.value)();cmd.previousElementSibling.selected=1;"><option value="" disabled selected>select command to run...</option><optgroup id="cmd"></optgroup></select>
+		<input class="sty" placeholder="chat..." onchange="send([3,...te.encode(`<${w.id}> ${this.value}`)],this.value='')"><br>
+		<select class="sty" onchange="this.nextElementSibling.value=((w.cfg||[])[this.value]||0).toFixed(4);this.nextElementSibling.onchange();" id="cfgi"><option value="" disabled selected>select cfg...</option><option value="0">LF</option><option value="1">RF</option><option value="2">LB</option><option value="3">RB</option></select>
+		<input class="sty" type="range" min="-0.05" max="0.05" step="0.01" onchange="this.max=(+this.value+.05).toFixed(4);this.min=(+this.value-.05).toFixed(4);" oninput="cfgi.value&&send([4,...f2b((x=>(x=[...x],x[cfgi.value]=+this.value,x))(w.cfg||[0,0,0,0]))])">
 		<pre id="log"></pre>
 		<script>
 			'use strict';
-			let ws={},timer,stick_stat;
+			let ws={},timer,stick_stat=1;
 			const
 				w={},
 				te=new TextEncoder(),td=new TextDecoder(),
@@ -48,12 +50,15 @@
 						)
 					})
 				),
-				send=w=>ws.readyState==1&&ws.send(new Uint8Array(w).buffer),
-				flush=_=>(cmd.innerHTML=w.clis.reduce((a,x)=>(x!=w.id&&w.id==w.op&&(a+=`<option value="1,${x}">/op @a[id=${x}]</option>`),a),''),cmd.previousElementSibling.selected=1);
+				send=w=>ws.readyState==1?ws.send(new Uint8Array(w).buffer):console.log(w),
+				flush=_=>cmd.innerHTML=w.id==w.op?w.clis.reduce(
+					(a,x)=>(x!=w.id&&(a+=`<option value="send([1,${x}]);">/op @a[id=${x}]</option>`),a),
+					'<option value="send([0]);">/cfg save</option>'
+				):'';
 
 			stick.ontouchstart=e=>e.preventDefault();
 			stick.onpointerdown=e=>(stick_stat=true,onpointermove(e));
-			(onpointerup=onpointerleave=onpointercancel=_=>(stick_stat=false,clearTimeout(timer),timer=0,send([2,...f2b([0,0])]),stick.children[0].style.transform='translate(-50%,-50%)'))();
+			(onpointerup=onpointerleave=onpointercancel=_=>stick_stat&&(stick_stat=false,clearTimeout(timer),timer=0,send([2,...f2b([0,0])]),stick.children[0].style.transform='translate(-50%,-50%)'))();
 			onpointermove=(e,bcr=stick.getBoundingClientRect(),p=[
 				(e.clientX-bcr.left-bcr.width*.5)||0,
 				(e.clientY-bcr.top-bcr.height*.5)||0
@@ -66,6 +71,7 @@
 				timer=setTimeout(()=>timer=0,50)
 			);
 			window.onload=main;
+			cfgi.value='';cfgi.nextElementSibling.value=0;
 		</script>
 	</body>
 </html>
