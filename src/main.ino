@@ -16,7 +16,7 @@ float smoothstep(float a,float b,float x){x=linearstep(a,b,x);return x*x*(3.-2.*
 
 void servo_init(uint8_t ch,uint8_t pin){ledcSetup(ch,320,LEDC_TIMER_14_BIT);ledcAttachPin(pin,ch);}
 void servo(uint8_t ch,float x){ledcWrite(ch,(x*2000+500)*5.24288);}// tick/us=(hz*(2^bit))/1000000
-float walk(float x,float s){x=fract(x)*2.;s*=.2;return mix(.5,saturate(mix(mix(-2.,3.,linearstep(.9,0.,x+.05)),linearstep(.9,2.,x),step(.9,x))),s);}// [0~1]
+float walk(float x,float s){x=fract(x)*2.;s*=.3;return mix(.5,saturate(mix(mix(3.,-2.,linearstep(0.,.9,x)),linearstep(.9,2.,x),step(.9,x))),s);}// [0~1]
 
 // [ offsetLF, offsetRF, offsetLB, offsetRB ]
 void cfgsave(){File x=FSYS.open(CFG_PATH,FILE_WRITE);x.write((const uint8_t*)&cfg,sizeof(cfg));x.close();}
