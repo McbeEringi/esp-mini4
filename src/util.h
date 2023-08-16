@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <driver/ledc.h>
 #include <LittleFS.h>
 #define FSYS LittleFS
