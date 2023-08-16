@@ -4,7 +4,10 @@ AsyncWebServer svr(80);
 AsyncWebSocket ws("/ws");
 AsyncWebSocketClient *op=NULL;
 float v[2]={},cfg[4]={},t,pitch;
-Adafruit_SSD1306 display(128,64,&Wire,-1);
+uint32_t dt;
+#ifdef USE_OLED
+	Adafruit_SSD1306 display(128,64,&Wire,-1);
+#endif
 
 float fract(float x){return x-floor(x);}
 float clamp(float x,float a,float b){return fmin(fmax(x,a),b);}
@@ -59,48 +62,86 @@ void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void
 
 void setup(){
 	servo_init(LFCH,LFPIN);servo_init(RBCH,RBPIN);servo_init(LBCH,LBPIN);servo_init(RFCH,RFPIN);
-	Wire.begin(I2CD,I2CC);FSYS.begin();cfgload();
+	FSYS.begin();cfgload();
 
-	display.begin(SSD1306_SWITCHCAPVCC,0x3c);display.setTextColor(SSD1306_WHITE);
-	display.clearDisplay();
-	display.drawBitmap(32,0,icon,64,64,SSD1306_WHITE);
-	display.display();
+	#ifdef USE_OLED
+		Wire.begin(I2CD,I2CC);
+		display.begin(SSD1306_SWITCHCAPVCC,0x3c);display.setTextColor(SSD1306_WHITE);
+		display.clearDisplay();
+		display.drawBitmap(32,0,icon,64,64,SSD1306_WHITE);
+		display.display();
+	#else
+		neopixelWrite(NPDI,16,0,0);
+	#endif
 	delay(1000);
 	
-	display.clearDisplay();display.setCursor(32,8);
-	display.drawBitmap(0,0,giteki,24,24,SSD1306_WHITE);
-	display.printf(GITEKI);
-	display.printf("\nConnecting to WiFi...\n");
-	display.display();
-	delay(1000);
+	#ifdef USE_OLED
+		display.clearDisplay();display.setCursor(32,8);
+		display.drawBitmap(0,0,giteki,24,24,SSD1306_WHITE);
+		display.printf(GITEKI);
+		display.display();
+		display.printf("\nWiFi...");
+		display.display();
+	#else
+		neopixelWrite(NPDI,16,16,0);
+	#endif
 
 	WiFi.begin();
 	for(uint8_t i=0;WiFi.status()!=WL_CONNECTED;i++){
 		if(i>20){
-			display.clearDisplay();display.setCursor(0,0);display.printf("\nWiFi not found.\n\nSmartConfig started.\n");display.display();
-			WiFi.beginSmartConfig();while(!WiFi.smartConfigDone());display.printf("\nSmartConfig success!\n");display.display();
+			#ifdef USE_OLED
+				display.printf("CFG...");display.display();
+			#else
+				neopixelWrite(NPDI,16,0,16);
+			#endif
+			WiFi.beginSmartConfig();while(!WiFi.smartConfigDone());
 		}
 		delay(500);
 	}
+	#ifdef USE_OLED
+		display.printf("OK!\n");display.display();
+	#else
+		neopixelWrite(NPDI,0,16,0);
+	#endif
+
 	ArduinoOTA
 		.setHostname(NAME).setPassword(PASS)
-		// .onStart([](){FSYS.end();ws.enable(false);ws.textAll("OTA update started.");ws.closeAll();})
-		.onProgress([](unsigned int x,unsigned int a){display.clearDisplay();display.drawBitmap(32,0,icon,64,64,SSD1306_WHITE);display.drawFastHLine(0,62,128,SSD1306_WHITE);display.fillRect(1,61,x*126/a,3,SSD1306_WHITE);display.display();})
-		.onError([](ota_error_t e){display.clearDisplay();display.setCursor(0,0);display.printf("OTA %s\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"Flash":"FSYS",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");display.display();delay(5000);})
+		.onStart([](){FSYS.end();ws.enable(false);ws.textAll("OTA update started.");ws.closeAll();})
+		.onProgress([](unsigned int x,unsigned int a){
+			#ifdef USE_OLED
+				display.clearDisplay();display.drawBitmap(32,0,icon,64,64,SSD1306_WHITE);display.drawFastHLine(0,62,128,SSD1306_WHITE);display.fillRect(1,61,x*126/a,3,SSD1306_WHITE);display.display();
+			#else
+				neopixelWrite(NPDI,(a-x)*255/a,x*255/a,0);
+			#endif
+		})
+		.onError([](ota_error_t e){
+			#ifdef USE_OLED
+				display.clearDisplay();display.setCursor(0,0);display.printf("OTA %s\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"Flash":"FSYS",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");display.display();delay(5000);
+			#else
+				neopixelWrite(NPDI,255,0,255);
+			#endif
+		})
 		.begin();
 	ws.onEvent(onWS);svr.addHandler(&ws);
 	svr.onNotFound([](AsyncWebServerRequest *request){request->redirect("/");});
 	svr.serveStatic("/",FSYS,"/").setDefaultFile("index.html");
 	svr.begin();
+	delay(1000);
 }
 
 void loop(){
 	ArduinoOTA.handle();
-	display.clearDisplay();display.setCursor(0,0);
-	if(ws.count())display.printf("\n%f\n\n%f\n\n%u",v[0],v[1],ws.count());
-	else display.printf("\n%s\n\n%s.local\n\n ( %s )",WiFi.SSID().c_str(),NAME,WiFi.localIP().toString().c_str());
-	display.display();
-	t+=(pitch=fmax(fmax(fabs(v[0]),fabs(v[1])),.3))*.1;
+	#ifdef USE_OLED
+		display.clearDisplay();display.setCursor(0,0);
+		if(ws.count())display.printf("\n%f\n\n%f\n\n%u",v[0],v[1],ws.count());
+		else display.printf("\n%s\n\n%s.local\n\n ( %s )",WiFi.SSID().c_str(),NAME,WiFi.localIP().toString().c_str());
+		display.display();
+	#else
+		if(ws.count()){uint8_t x=(sin(millis()/1000.*3.1415)*.5+.5)*16;neopixelWrite(NPDI,x,x,x);}
+		else if((uint32_t)WiFi.localIP())neopixelWrite(NPDI,0,16,0);else neopixelWrite(NPDI,16,16,0);
+	#endif
+	t+=(pitch=fmax(fmax(fabs(v[0]),fabs(v[1])),.3))/(dt=millis()-dt)*.25;
+	dt=millis();
 	servo(LFCH,walk(t+.5,v[0]/pitch)+cfg[0]);servo(RFCH,walk(t   ,-v[1]/pitch)+cfg[1]);
 	servo(LBCH,walk(t   ,v[0]/pitch)+cfg[2]);servo(RBCH,walk(t+.5,-v[1]/pitch)+cfg[3]);
 	delay(10);
