@@ -16,12 +16,12 @@ module joiner(d=30.5,c=2.2,h=4.5){
 
 module band(d=30.5){
 	t=2;b=3;
-	translate([0,(12.1+t)/2+b,4])difference(){
-		translate([0,-b/2,0])cube([22.5*2+5.2+t+d,12.1+t+b,8],center=true);
+	translate([0,(12.1+t)/2+b,4.5])difference(){
+		translate([0,-b/2,0])cube([22.5*2+5.2+t+d,12.1+t+b,9],center=true);
 		for(i=[-1,1])translate([(22.5+5.2+d)/2*i,0,0])
-			cube([22.5,12.1,9],center=true);
+			cube([22.5,12.1,10],center=true);
 		w=(d+5.2-t)/2;h=12.1+t/2;r=sqrt((w*w+h*h)/4*(1+w*w/h/h));
-		translate([0,r-12.1/2,0])cylinder(r=r,h=9,center=true);
+		translate([0,r-12.1/2,0])cylinder(r=r,h=10,center=true);
 	}
 }
 
