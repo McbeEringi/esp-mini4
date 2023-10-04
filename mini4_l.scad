@@ -15,13 +15,13 @@ module joiner(d=30.5,c=2.2,h=4.5){
 }
 
 module band(d=30.5){
-	t=2;
-	translate([0,(12.1+t)/2,5])difference(){
-		cube([22.5*2+5.2+t+d,12.1+t,10],center=true);
+	t=2;b=3;
+	translate([0,(12.1+t)/2+b,4])difference(){
+		translate([0,-b/2,0])cube([22.5*2+5.2+t+d,12.1+t+b,8],center=true);
 		for(i=[-1,1])translate([(22.5+5.2+d)/2*i,0,0])
-			cube([22.5,12.1,11],center=true);
+			cube([22.5,12.1,9],center=true);
 		w=(d+5.2-t)/2;h=12.1+t/2;r=sqrt((w*w+h*h)/4*(1+w*w/h/h));
-		translate([0,r-12.1/2,0])cylinder(r=r,h=11,center=true);
+		translate([0,r-12.1/2,0])cylinder(r=r,h=9,center=true);
 	}
 }
 
@@ -35,6 +35,6 @@ module leg()difference(){
 	translate([0,-.5,-.1])cube([10,1,3]);
 }
 
-band();
-for(i=[-1,1])scale([i,1,1])translate([3.5,21,0])joiner();
+translate([0,12,0])band();
+for(i=[-1,1])scale([i,1,1])translate([3.5,6,0])joiner();
 for(i=[0:3])translate([-35,-5-10*i,0])leg();
