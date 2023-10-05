@@ -111,14 +111,14 @@ void setup(){
 			#ifdef USE_OLED
 				display.clearDisplay();display.drawBitmap(32,0,icon,64,64,SSD1306_WHITE);display.drawFastHLine(0,62,128,SSD1306_WHITE);display.fillRect(1,61,x*126/a,3,SSD1306_WHITE);display.display();
 			#else
-				neopixelWrite(NPDI,(a-x)*255/a,x*255/a,0);
+				neopixelWrite(NPDI,(a-x)*64/a,x*64/a,0);
 			#endif
 		})
 		.onError([](ota_error_t e){
 			#ifdef USE_OLED
 				display.clearDisplay();display.setCursor(0,0);display.printf("OTA %s\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"Flash":"FSYS",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");display.display();delay(5000);
 			#else
-				neopixelWrite(NPDI,255,0,255);
+				neopixelWrite(NPDI,64,0,64);
 			#endif
 		})
 		.begin();
@@ -140,7 +140,7 @@ void loop(){
 		if(ws.count()){uint8_t x=(sin(millis()/1000.*3.1415)*.5+.5)*16;neopixelWrite(NPDI,x,x,x);}
 		else if((uint32_t)WiFi.localIP())neopixelWrite(NPDI,0,16,0);else neopixelWrite(NPDI,16,16,0);
 	#endif
-	t+=(pitch=fmax(fmax(fabs(v[0]),fabs(v[1])),.3))/(dt=millis()-dt)*.25;
+	t+=(pitch=fmax(fmax(fabs(v[0]),fabs(v[1])),.3))/(millis()-dt)*.25;
 	dt=millis();
 	servo(LFCH,walk(t+.5,v[0]/pitch)+cfg[0]);servo(RFCH,walk(t   ,-v[1]/pitch)+cfg[1]);
 	servo(LBCH,walk(t   ,v[0]/pitch)+cfg[2]);servo(RBCH,walk(t+.5,-v[1]/pitch)+cfg[3]);
