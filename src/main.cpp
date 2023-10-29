@@ -3,11 +3,9 @@
 AsyncWebServer svr(80);
 AsyncWebSocket ws("/ws");
 AsyncWebSocketClient *op=NULL;
+m5avatar::Avatar avatar;
 float v[2]={},cfg[4]={},t,pitch;
 uint32_t dt;
-#ifdef USE_OLED
-	m5avatar::Avatar avatar;
-#endif
 
 float fract(float x){return x-floor(x);}
 float clamp(float x,float a,float b){return fmin(fmax(x,a),b);}
@@ -64,69 +62,54 @@ void setup(){
 	servo_init(LFCH,LFPIN);servo_init(RBCH,RBPIN);servo_init(LBCH,LBPIN);servo_init(RFCH,RFPIN);
 	FSYS.begin();cfgload();
 
-	#ifdef USE_OLED
-		auto cfg=M5.config();
-		cfg.unit_glass2.pin_sda=I2CD;
-		cfg.unit_glass2.pin_scl=I2CC;
-		M5.begin(cfg);
-		M5.setPrimaryDisplayType({m5::board_t::board_M5UnitGLASS2});
-
-		M5.Lcd.drawBmpFile(FSYS,ICON_PATH,32,0);
-		M5.update();
-	#endif
 	neopixelWrite(NPDI,16,0,0);
+	auto cfg=M5.config();
+	cfg.unit_glass2.pin_sda=I2CD;
+	cfg.unit_glass2.pin_scl=I2CC;
+	M5.begin(cfg);
+	M5.setPrimaryDisplayType({m5::board_t::board_M5UnitGLASS2});
+	M5.Lcd.drawBmpFile(FSYS,ICON_PATH,32,0);
+	M5.update();
 	delay(1000);
 	
-	#ifdef USE_OLED
-		M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.setCursor(32,8);
-		M5.Lcd.drawBmpFile(FSYS,GITEKI_PATH,0,0);
-		M5.Lcd.printf(GITEKI);
-		M5.update();
-		M5.Lcd.printf("\nWiFi...");
-		M5.update();
-	#endif
 	neopixelWrite(NPDI,16,16,0);
+	M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.setCursor(32,8);
+	M5.Lcd.drawBmpFile(FSYS,GITEKI_PATH,0,0);
+	M5.Lcd.printf(GITEKI);
+	M5.update();
+	M5.Lcd.printf("\nWiFi...");
+	M5.update();
 
 	WiFi.begin();
 	for(uint8_t i=0;WiFi.status()!=WL_CONNECTED;i++){
 		if(i>20){
-			#ifdef USE_OLED
-				M5.Lcd.printf("CFG...");M5.update();
-			#endif
 			neopixelWrite(NPDI,16,0,16);
+			M5.Lcd.printf("CFG...");M5.update();
 			WiFi.beginSmartConfig();while(!WiFi.smartConfigDone());
 		}
 		delay(500);
 	}
-	#ifdef USE_OLED
-		M5.Lcd.printf("OK!\n");M5.update();
-		avatar.setScale(.3);
-		avatar.setPosition(-88,-96);
-		avatar.init();
-	#endif
 	neopixelWrite(NPDI,0,16,0);
+	M5.Lcd.printf("OK!\n");M5.update();
+	avatar.setScale(.3);
+	avatar.setPosition(-88,-96);
+	avatar.init();
 
 	ArduinoOTA
 		.setHostname(NAME).setPassword(PASS)
 		.onStart([](){
-			#ifdef USE_OLED
-				avatar.suspend();delay(1);
-				M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.drawBmpFile(FSYS,ICON_PATH,32,0);M5.Lcd.drawFastHLine(0,62,128,TFT_WHITE);M5.update();
-			#endif
+			avatar.suspend();delay(1);
+			M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.drawBmpFile(FSYS,ICON_PATH,32,0);M5.Lcd.drawFastHLine(0,62,128,TFT_WHITE);M5.update();
 			FSYS.end();ws.enable(false);ws.textAll("OTA update started.");ws.closeAll();
 		})
 		.onProgress([](unsigned int x,unsigned int a){
-			#ifdef USE_OLED
-				M5.Lcd.fillRect(1,61,x*126/a,3,TFT_WHITE);M5.update();
-			#endif
 			neopixelWrite(NPDI,(a-x)*64/a,x*64/a,0);
+			M5.Lcd.fillRect(1,61,x*126/a,3,TFT_WHITE);M5.update();
 		})
 		.onError([](ota_error_t e){
-			#ifdef USE_OLED
-				M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.setCursor(0,0);M5.Lcd.printf("OTA %s\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"Flash":"FSYS",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");M5.update();delay(5000);
-				avatar.resume();
-			#endif
 			neopixelWrite(NPDI,64,0,64);
+			M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.setCursor(0,0);M5.Lcd.printf("OTA %s\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"Flash":"FSYS",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");M5.update();delay(5000);
+			avatar.resume();
 		})
 		.begin();
 	ws.onEvent(onWS);svr.addHandler(&ws);
@@ -138,12 +121,10 @@ void setup(){
 
 void loop(){
 	ArduinoOTA.handle();
-	// #ifdef USE_OLED
 	// 	M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.setCursor(0,0);
 	// 	if(ws.count())M5.Lcd.printf("\n%f\n\n%f\n\n%u",v[0],v[1],ws.count());
 	// 	else M5.Lcd.printf("\n%s\n\n%s.local\n\n ( %s )",WiFi.SSID().c_str(),NAME,WiFi.localIP().toString().c_str());
 	// 	M5.update();
-	// #endif
 	if(ws.count()){uint8_t x=(sin(millis()/1000.*3.1415)*.5+.5)*16;neopixelWrite(NPDI,x,x,x);}
 	else if((uint32_t)WiFi.localIP())neopixelWrite(NPDI,0,16,0);else neopixelWrite(NPDI,16,16,0);
 
