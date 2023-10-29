@@ -66,11 +66,10 @@ void setup(){
 
 	#ifdef USE_OLED
 		auto cfg=M5.config();
-		cfg.unit_glass2.pin_sda=9;
-		cfg.unit_glass2.pin_scl=8;
+		cfg.unit_glass2.pin_sda=I2CD;
+		cfg.unit_glass2.pin_scl=I2CC;
 		M5.begin(cfg);
 		M5.setPrimaryDisplayType({m5::board_t::board_M5UnitGLASS2});
-		M5.Lcd.setColorDepth(1);
 
 		M5.Lcd.drawBmpFile(FSYS,ICON_PATH,32,0);
 		M5.update();

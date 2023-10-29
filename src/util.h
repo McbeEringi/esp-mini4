@@ -15,8 +15,7 @@
 #define PASS "mcbeeringi"
 
 #define CFG_PATH "/config.bin"
-#define ICON_PATH "/icon.bmp"
-#define GITEKI_PATH "/giteki.bmp"
+#define NPDI 0
 
 #define LFPIN 4
 #define LBPIN 6
@@ -32,6 +31,7 @@
 	#define I2CD 9
 	#define I2CC 8
 
+	#define ICON_PATH "/icon.bmp"
+	#define GITEKI_PATH "/giteki.bmp"
 	#define GITEKI "R 201-220555\n\n\nESP32-C3-WROOM-02\n"
 #endif
-#define NPDI 0
