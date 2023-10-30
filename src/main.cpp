@@ -68,29 +68,28 @@ void setup(){
 	cfg.unit_glass2.pin_scl=I2CC;
 	M5.begin(cfg);
 	M5.setPrimaryDisplayType({m5::board_t::board_M5UnitGLASS2});
+	M5.Lcd.setBrightness(0);
 	M5.Lcd.drawBmpFile(FSYS,ICON_PATH,32,0);
-	M5.update();
-	delay(1000);
+	for(uint8_t i=1<<3;i<128;i+=i>>3){M5.Lcd.setBrightness(i);delay(50);}
 	
-	neopixelWrite(NPDI,16,16,0);
 	M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.setCursor(32,8);
 	M5.Lcd.drawBmpFile(FSYS,GITEKI_PATH,0,0);
 	M5.Lcd.printf(GITEKI);
-	M5.update();
-	M5.Lcd.printf("\nWiFi...");
-	M5.update();
+	delay(1000);
 
+	neopixelWrite(NPDI,16,16,0);
+	M5.Lcd.printf("\nWiFi...");
 	WiFi.begin();
 	for(uint8_t i=0;WiFi.status()!=WL_CONNECTED;i++){
 		if(i>20){
 			neopixelWrite(NPDI,16,0,16);
-			M5.Lcd.printf("CFG...");M5.update();
+			M5.Lcd.printf("CFG...");
 			WiFi.beginSmartConfig();while(!WiFi.smartConfigDone());
 		}
 		delay(500);
 	}
 	neopixelWrite(NPDI,0,16,0);
-	M5.Lcd.printf("OK!\n");M5.update();
+	M5.Lcd.printf("OK!\n");
 	avatar.setScale(.3);
 	avatar.setPosition(-88,-96);
 	// avatar.setSpeechFont(&fonts::lgfxJapanGothic_8);
@@ -100,18 +99,18 @@ void setup(){
 	ArduinoOTA
 		.setHostname(NAME).setPassword(PASS)
 		.onStart([](){
-			avatar.stop();delay(1);
-			M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.drawBmpFile(FSYS,ICON_PATH,32,0);M5.Lcd.drawFastHLine(0,62,128,TFT_WHITE);M5.update();delay(1);
-			FSYS.end();ws.enable(false);ws.textAll("OTA update started.");ws.closeAll();
+			avatar.stop();delay(100);
+			M5.Lcd.startWrite();M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.drawBmpFile(FSYS,ICON_PATH,32,0);M5.Lcd.drawFastHLine(0,62,128,TFT_WHITE);M5.Lcd.endWrite();
+			ws.enable(false);ws.textAll("OTA update started.");ws.closeAll();FSYS.end();
 		})
 		.onProgress([](unsigned int x,unsigned int a){
 			neopixelWrite(NPDI,(a-x)*64/a,x*64/a,0);
-			M5.Lcd.fillRect(1,61,x*126/a,3,TFT_WHITE);M5.update();
+			M5.Lcd.fillRect(1,61,x*126/a,3,TFT_WHITE);
 		})
 		.onError([](ota_error_t e){
 			neopixelWrite(NPDI,64,0,64);
 			M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.setCursor(0,0);M5.Lcd.printf("OTA %s\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"Flash":"FSYS",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");M5.update();delay(5000);
-			avatar.start();
+			avatar.start();ws.enable(true);FSYS.begin();
 		})
 		.begin();
 	ws.onEvent(onWS);svr.addHandler(&ws);
@@ -126,7 +125,6 @@ void loop(){
 	// 	M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.setCursor(0,0);
 	// 	if(ws.count())M5.Lcd.printf("\n%f\n\n%f\n\n%u",v[0],v[1],ws.count());
 	// 	else M5.Lcd.printf("\n%s\n\n%s.local\n\n ( %s )",WiFi.SSID().c_str(),NAME,WiFi.localIP().toString().c_str());
-	// 	M5.update();
 
 	if(ws.count()){uint8_t x=(sin(millis()/1000.*3.1415)*.5+.5)*16;neopixelWrite(NPDI,x,x,x);}
 	else if((uint32_t)WiFi.localIP())neopixelWrite(NPDI,0,16,0);else neopixelWrite(NPDI,16,16,0);
@@ -134,6 +132,7 @@ void loop(){
 	t+=(pitch=fmax(fmax(fabs(v[0]),fabs(v[1])),.3))/(millis()-dt)*.25;
 	dt=millis();
 	avatar.setMouthOpenRatio((sin(t*6.283)*.5+.5)*pitch);
+	avatar.setRotation((v[1]-v[0])*16.);
 	servo(LFCH,walk(t+.5,v[0]/pitch)+cfg[0]);servo(RFCH,walk(t   ,-v[1]/pitch)+cfg[1]);
 	servo(LBCH,walk(t   ,v[0]/pitch)+cfg[2]);servo(RBCH,walk(t+.5,-v[1]/pitch)+cfg[3]);
 	delay(10);
