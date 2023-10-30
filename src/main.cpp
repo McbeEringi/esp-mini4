@@ -48,7 +48,7 @@ void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void
 					case 2:{// velocity rxtx [2,L,L,L,L,R,R,R,R] LittleEndian float
 						if(op==client){v[0]=*(float*)(data+1);v[1]=*(float*)(data+5);ws->binaryAll(data,9);}
 					}break;
-					case 3:{ws->binaryAll(data,info->len);}break;// txt rxtx [3,...txt]
+					case 3:{ws->binaryAll(data,info->len);/*avatar.setSpeechText((const char*)data);*/}break;// txt rxtx [3,...txt]
 					case 4:{// offset rxtx [4,LF...,RF...,LB...,Rb...] LittleEndian float
 						if(op==client){for(uint8_t i=0;i<4;i++)cfg[i]=*(float*)(data+1+(i<<2));ws->binaryAll(data,17);}
 					}break;
@@ -93,12 +93,13 @@ void setup(){
 	M5.Lcd.printf("OK!\n");M5.update();
 	avatar.setScale(.3);
 	avatar.setPosition(-88,-96);
+	// avatar.setSpeechFont(&fonts::lgfxJapanGothic_8);
 	avatar.init();
 
 	ArduinoOTA
 		.setHostname(NAME).setPassword(PASS)
 		.onStart([](){
-			avatar.suspend();delay(1);
+			avatar.stop();
 			M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.drawBmpFile(FSYS,ICON_PATH,32,0);M5.Lcd.drawFastHLine(0,62,128,TFT_WHITE);M5.update();
 			FSYS.end();ws.enable(false);ws.textAll("OTA update started.");ws.closeAll();
 		})
@@ -109,7 +110,7 @@ void setup(){
 		.onError([](ota_error_t e){
 			neopixelWrite(NPDI,64,0,64);
 			M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.setCursor(0,0);M5.Lcd.printf("OTA %s\nErr[%u]: %s_ERROR",ArduinoOTA.getCommand()==U_FLASH?"Flash":"FSYS",e,e==0?"AUTH":e==1?"BEGIN":e==2?"CONNECT":e==3?"RECIEVE":e==4?"END":"UNKNOWN");M5.update();delay(5000);
-			avatar.resume();
+			avatar.start();
 		})
 		.begin();
 	ws.onEvent(onWS);svr.addHandler(&ws);
