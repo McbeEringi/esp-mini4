@@ -31,10 +31,10 @@ void flush(AsyncWebSocket *ws){// op tx [1,op,...clis]
 void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void *arg,uint8_t *data,size_t len){
 	switch(type){
 		case WS_EVT_CONNECT:{// init tx [0,id,LF...,RF...,LB...,Rb...] LittleEndian float
-			uint8_t l=18,a[l]={0,(uint8_t)client->id()};for(uint8_t i=0;i<16;i++)a[i+2]=*(((uint8_t*)&cfg)+i);client->binary(a,l);if(op==NULL)op=client;flush(ws);
+			uint8_t l=18,a[l]={0,(uint8_t)client->id()};for(uint8_t i=0;i<16;i++)a[i+2]=*(((uint8_t*)&cfg)+i);client->binary(a,l);if(op==NULL){op=client;avatar.setExpression(m5avatar::Expression::Neutral);}flush(ws);
 		}break;
 		case WS_EVT_DISCONNECT:{
-			if(ws->count()){if(op==client)op=*(ws->getClients().begin());flush(ws);}else op=NULL;
+			if(ws->count()){if(op==client)op=*(ws->getClients().begin());flush(ws);}else{op=NULL;avatar.setExpression(m5avatar::Expression::Sleepy);}
 			v[0]=0;v[1]=0;
 		}break;
 		case WS_EVT_DATA:{
@@ -94,13 +94,14 @@ void setup(){
 	avatar.setScale(.3);
 	avatar.setPosition(-88,-96);
 	// avatar.setSpeechFont(&fonts::lgfxJapanGothic_8);
-	avatar.init();
+	avatar.start();
+	avatar.setExpression(m5avatar::Expression::Sleepy);
 
 	ArduinoOTA
 		.setHostname(NAME).setPassword(PASS)
 		.onStart([](){
-			avatar.stop();
-			M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.drawBmpFile(FSYS,ICON_PATH,32,0);M5.Lcd.drawFastHLine(0,62,128,TFT_WHITE);M5.update();
+			avatar.stop();delay(1);
+			M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.drawBmpFile(FSYS,ICON_PATH,32,0);M5.Lcd.drawFastHLine(0,62,128,TFT_WHITE);M5.update();delay(1);
 			FSYS.end();ws.enable(false);ws.textAll("OTA update started.");ws.closeAll();
 		})
 		.onProgress([](unsigned int x,unsigned int a){
@@ -117,7 +118,7 @@ void setup(){
 	svr.onNotFound([](AsyncWebServerRequest *request){request->redirect("/");});
 	svr.serveStatic("/",FSYS,"/").setDefaultFile("index.html");
 	svr.begin();
-	delay(1000);
+	delay(100);
 }
 
 void loop(){
@@ -126,11 +127,13 @@ void loop(){
 	// 	if(ws.count())M5.Lcd.printf("\n%f\n\n%f\n\n%u",v[0],v[1],ws.count());
 	// 	else M5.Lcd.printf("\n%s\n\n%s.local\n\n ( %s )",WiFi.SSID().c_str(),NAME,WiFi.localIP().toString().c_str());
 	// 	M5.update();
+
 	if(ws.count()){uint8_t x=(sin(millis()/1000.*3.1415)*.5+.5)*16;neopixelWrite(NPDI,x,x,x);}
 	else if((uint32_t)WiFi.localIP())neopixelWrite(NPDI,0,16,0);else neopixelWrite(NPDI,16,16,0);
 
 	t+=(pitch=fmax(fmax(fabs(v[0]),fabs(v[1])),.3))/(millis()-dt)*.25;
 	dt=millis();
+	avatar.setMouthOpenRatio((sin(t*6.283)*.5+.5)*pitch);
 	servo(LFCH,walk(t+.5,v[0]/pitch)+cfg[0]);servo(RFCH,walk(t   ,-v[1]/pitch)+cfg[1]);
 	servo(LBCH,walk(t   ,v[0]/pitch)+cfg[2]);servo(RBCH,walk(t+.5,-v[1]/pitch)+cfg[3]);
 	delay(10);
