@@ -35,7 +35,7 @@ module leg(l){
 		cylinder(d=4.76,h=8,center=true);
 		translate([0,-.5,-.1])cube([10,1,4]);
 	}
-	translate([l,0,0])cylinder(d=5,h=10);
+	//translate([l,0,0])cylinder(d=5,h=10);
 }
 
 d=9;
