@@ -69,11 +69,11 @@ void setup(){
 	M5.begin(cfg);
 	M5.setPrimaryDisplayType({m5::board_t::board_M5UnitGLASS2});
 	M5.Lcd.setBrightness(0);
-	M5.Lcd.drawBmpFile(FSYS,ICON_PATH,32,0);
+	M5.Lcd.drawPngFile(FSYS,ICON_PATH,32,0);
 	for(uint8_t i=1<<3;i<128;i+=i>>3){M5.Lcd.setBrightness(i);delay(50);}
 	
 	M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.setCursor(32,8);
-	M5.Lcd.drawBmpFile(FSYS,GITEKI_PATH,0,0);
+	M5.Lcd.drawPngFile(FSYS,GITEKI_PATH,0,0);
 	M5.Lcd.printf(GITEKI);
 	delay(1000);
 
@@ -100,7 +100,7 @@ void setup(){
 		.setHostname(NAME).setPassword(PASS)
 		.onStart([](){
 			avatar.stop();delay(100);
-			M5.Lcd.startWrite();M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.drawBmpFile(FSYS,ICON_PATH,32,0);M5.Lcd.drawFastHLine(0,62,128,TFT_WHITE);M5.Lcd.endWrite();
+			M5.Lcd.startWrite();M5.Lcd.fillScreen(TFT_BLACK);M5.Lcd.drawPngFile(FSYS,ICON_PATH,32,0);M5.Lcd.drawFastHLine(0,62,128,TFT_WHITE);M5.Lcd.endWrite();
 			ws.enable(false);ws.textAll("OTA update started.");ws.closeAll();FSYS.end();
 		})
 		.onProgress([](unsigned int x,unsigned int a){
